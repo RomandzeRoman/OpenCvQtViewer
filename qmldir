@@ -1,0 +1,2 @@
+module OpenCvQtViewer
+VideoViewer 1.0 VideoViewer.qml

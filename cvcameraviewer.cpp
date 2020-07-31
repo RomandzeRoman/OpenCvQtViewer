@@ -4,17 +4,18 @@
 
 #include <QVideoSurfaceFormat>
 
-#include "DebugOutput/debugoutput.h"
+#include "QtDebugPrint/debugoutput.h"
 
 const int reconnectTimeout = 1000; // ms
-const QVideoFrame FRAME_FORMAT = QVideoFrame::Format_RGB32;
+const QVideoFrame::PixelFormat FRAME_FORMAT = QVideoFrame::Format_RGB32;
 
 CvCameraViewer::CvCameraViewer(
-        const QString &cameraAddress,
-        QObject *parent
+        const QString& cameraAddress,
+        std::function<void(cv::Mat input, cv::Mat& output)> task,
+        QObject* parent
         )
     : QObject(parent)
-    , _videoThread{new VideoProcessThread(cameraAddress, this)}
+    , _videoThread{new VideoProcessThread(cameraAddress, task, this)}
     , _frame()
     , _cvAliasToFrame()
     , _reconnectTimer{ new QTimer(this) }
@@ -25,10 +26,11 @@ CvCameraViewer::CvCameraViewer(
 
 CvCameraViewer::CvCameraViewer(
         int cameraIndex,
-        QObject *parent
+        std::function<void(cv::Mat input, cv::Mat& output)> task,
+        QObject* parent
         )
     : QObject(parent)
-    , _videoThread{new VideoProcessThread(cameraIndex, this)}
+    , _videoThread{new VideoProcessThread(cameraIndex, task, this)}
     , _frame()
     , _cvAliasToFrame()
     , _reconnectTimer{ new QTimer(this) }

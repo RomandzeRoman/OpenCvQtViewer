@@ -40,7 +40,6 @@ Page {
             text: "Камера недоступна"
             horizontalAlignment: Label.AlignHCenter
             verticalAlignment: Label.AlignVCenter
-            //color: "white"
             Layout.alignment: Qt.AlignCenter
         }
     }
@@ -48,14 +47,10 @@ Page {
     Label {
         id: nameLabel
         anchors.left: parent.left
-        //anchors.right: parent.right
         anchors.top: parent.top
         anchors.margins: 4
 
         padding: 5
-
-        //text: "Имя не указано"
-        //color: "white"
 
         background: Rectangle {
             color: "#88CCCCCC"

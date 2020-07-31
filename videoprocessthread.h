@@ -15,21 +15,20 @@ class VideoProcessThread : public QThread
 
     Q_PROPERTY(bool connected
                READ connected
-               // WRITE setConnected
                NOTIFY connectedChanged)
 
 public:
     explicit VideoProcessThread(
-            const QString &cameraAddress,
-            QObject *parent = nullptr
+            const QString& cameraAddress,
+            std::function<void(cv::Mat input, cv::Mat& output)> task,
+            QObject* parent = nullptr
             );
     explicit VideoProcessThread(
             int cameraIndex,
-            QObject *parent = nullptr
+            std::function<void(cv::Mat input, cv::Mat& output)> task,
+            QObject* parent = nullptr
             );
     ~VideoProcessThread() override;
-
-    //const cv::Mat &receivedFrame() const;
 
     void copyReceivedFrameTo(cv::OutputArray frame);
 
@@ -54,11 +53,12 @@ private:
     void setLaserCount(int laserCount);
 
 private:
-    //QThread _processThread;
     QMutex _mutex;
     cv::VideoCapture* _capture;
     cv::Mat _receivedFrame;
     cv::Mat _processedFrame;
+
+    std::function<void(cv::Mat input, cv::Mat& output)> _task;
     const QString _cameraAddress;
     const int _cameraIndex;
     int _width;

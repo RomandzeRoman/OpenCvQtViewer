@@ -4,40 +4,42 @@
 #include <opencv2/opencv.hpp>
 //#include <opencv2/core/hal/interface.h> // cv_8uc3
 
-#include "debugoutput.h"
-
-const int threshold = 190;//208;//190;//174;
-const int blur = 3;//5;//3;
-const double scale = 2.0;
+#include "QtDebugPrint/debugoutput.h"
 
 cv::Scalar randomColor(cv::RNG& rng);
 
 VideoProcessThread::VideoProcessThread(
-        const QString &cameraAddress,
-        QObject *parent
+        const QString& cameraAddress,
+        std::function<void(cv::Mat, cv::Mat&)> task,
+        QObject* parent
         )
     : QThread(parent)
     , _mutex()
-    , _capture(new cv::VideoCapture(qPrintable(cameraAddress)/*qPrintable(cameraAddress)*/))
+    , _capture(new cv::VideoCapture(qPrintable(cameraAddress)))
     , _receivedFrame{}
     , _processedFrame{}
+    , _task{ task }
     , _cameraAddress(cameraAddress)
-    , _cameraIndex{-1}
-    , _width{0}
-    , _height{0}
-    , _laserCount{0}
+    , _cameraIndex{ -1 }
+    , _width{ 0 }
+    , _height{ 0 }
+    , _laserCount{ 0 }
     , _abort{ false }
     , _connected{false}
 {
 
 }
 
-VideoProcessThread::VideoProcessThread(int cameraIndex, QObject* parent)
+VideoProcessThread::VideoProcessThread(
+        int cameraIndex,
+        std::function<void(cv::Mat, cv::Mat&)> task,
+        QObject* parent)
     : QThread(parent)
     , _mutex()
     , _capture(new cv::VideoCapture(cameraIndex))
     , _receivedFrame{}
     , _processedFrame{}
+    , _task{ task }
     , _cameraAddress()
     , _cameraIndex{cameraIndex}
     , _width{0}
@@ -74,7 +76,7 @@ void VideoProcessThread::run() {
     cv::Mat blured, binarizedFrame, processed, small;
     int64 tick = cv::getTickCount();
     double t(0.0);
-    int fps = 0;
+    int fps, momentFps = 0;
     forever {
         if (_abort) {
             return;
@@ -108,41 +110,18 @@ void VideoProcessThread::run() {
                 emit frameSizeChanged(_width, _height);
             }
 
-            // Delete noise for small
-            double fx = 1 / scale;
-            //cv::resize( _receivedFrame, small, cv::Size(), fx, fx, cv::INTER_LINEAR );
-            //cv::medianBlur(small, blured, blur);
+            _task(_receivedFrame, processed);
 
-            // Delete noise for big
-            cv::medianBlur(_receivedFrame, blured, blur);
+//            emit laserCountChanged(contoursSize);
 
-            cv::cvtColor(blured, binarizedFrame, cv::COLOR_RGB2GRAY );
-            cv::threshold(binarizedFrame, binarizedFrame, threshold, 255.0, cv::THRESH_BINARY);
-
-            std::vector<std::vector<cv::Point>> contours;
-            cv::findContours(binarizedFrame, contours, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE);
-
-            processed = _receivedFrame.clone();
             t = double(cv::getTickCount() - tick);
             tick = cv::getTickCount();
-            fps = cv::getTickFrequency()/t;//timeInMs = t*1000/getTickFrequency();
-            //fps = t*1000/cv::getTickFrequency();
+            momentFps = int(cv::getTickFrequency()/t);
+            fps = 0.9*fps + 0.1*momentFps;
             cv::putText(processed, std::to_string(fps), cv::Point(0,50), cv::FONT_HERSHEY_SIMPLEX, 1.4, cv::Scalar(0,255,255), 3);
 
-
-            int contoursSize = int(contours.size());
-            cv::putText(processed, std::to_string(contoursSize),
-                        cv::Point(0,100), cv::FONT_HERSHEY_SIMPLEX, 1.4, cv::Scalar(0,0,255), 3);
-
-            cv::RNG rng(2);
-            for (int i = 0; i < contoursSize; ++i) {
-                cv::drawContours(processed, contours, i, cv::Scalar(0,0,255),4);
-            }
-            emit laserCountChanged(contoursSize);
-
             _mutex.lock();
-            //cv::cvtColor(binarizedFrame, _processedFrame, cv::COLOR_RGB2RGBA);
-            cv::cvtColor(processed, _processedFrame, cv::COLOR_RGB2RGBA);
+            _processedFrame = processed.clone();
             _mutex.unlock();
             emit frameReceived();
         }
@@ -166,13 +145,10 @@ void VideoProcessThread::processReconnectTimeout() {
     dbg << "created";
 }
 
-//const cv::Mat &VideoProcessThread::receivedFrame() const {
-//    return _processedFrame;
-//}
 
-/** *****************************************************************
+/********************************************************************
  * Private
- * ******************************************************************
+ ********************************************************************
  */
 
 void VideoProcessThread::setConnected(bool connected) {
@@ -184,8 +160,6 @@ void VideoProcessThread::setConnected(bool connected) {
     }
 }
 
-
-
 void VideoProcessThread::setLaserCount(int laserCount) {
     if (_laserCount != laserCount) {
         _laserCount = laserCount;
@@ -193,6 +167,3 @@ void VideoProcessThread::setLaserCount(int laserCount) {
     }
 }
 
-cv::Scalar randomColor(cv::RNG& rng) {
-    return cv::Scalar(rng.uniform(0.0,255.0), rng.uniform(0.0,255.0), rng.uniform(0.0,255.0));
-}

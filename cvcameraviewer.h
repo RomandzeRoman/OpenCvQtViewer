@@ -1,6 +1,8 @@
 #ifndef CVCAMERAVIEWER_H
 #define CVCAMERAVIEWER_H
 
+#include <functional>
+
 #include <QObject>
 #include <QTimer>
 
@@ -14,7 +16,7 @@ class CvCameraViewer : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(QAbstractVideoSurface *videoSurface
+    Q_PROPERTY(QAbstractVideoSurface* videoSurface
                READ videoSurface
                WRITE setVideoSurface
                NOTIFY videoSurfaceChanged)
@@ -25,12 +27,14 @@ class CvCameraViewer : public QObject
 
 public:
     explicit CvCameraViewer(
-            const QString &cameraAddress,
-            QObject *parent = nullptr
+            const QString& cameraAddress,
+            std::function<void(cv::Mat, cv::Mat&)> task,
+            QObject* parent = nullptr
             );
     explicit CvCameraViewer(
             int cameraIndex,
-            QObject *parent = nullptr
+            std::function<void(cv::Mat, cv::Mat&)> task,
+            QObject* parent = nullptr
             );
     void show();
 
@@ -38,7 +42,7 @@ public:
 
 public slots:
     void setVideoSurface(QAbstractVideoSurface *);
-    QAbstractVideoSurface *videoSurface();
+    QAbstractVideoSurface* videoSurface();
 
     bool connected() const;
 
