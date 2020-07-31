@@ -102,8 +102,7 @@ void VideoProcessThread::run() {
             //dbg << "retrieving";
             _capture->retrieve(_receivedFrame);
             if (_receivedFrame.cols != _width
-                || _receivedFrame.rows != _height
-                    )
+                || _receivedFrame.rows != _height)
             {
                 _width = _receivedFrame.cols;
                 _height = _receivedFrame.rows;
